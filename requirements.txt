@@ -1,0 +1,9 @@
+shutil
+py7zr
+pandas
+numpy
+rasterio
+osgeo
+pprint
+tqdm
+matplotlib
