@@ -1,9 +1,9 @@
-shutil
+pytest-shutil
 py7zr
 pandas
 numpy
 rasterio
-osgeo
-pprint
+pprintpp
 tqdm
 matplotlib
+GDAL
