@@ -96,7 +96,7 @@ def extract_rge(filename):
     print(f"{zipfile_path} is extracted to {EXTRACTION_PATH}.")
 
 
-def get_path_asc_paths(filename, EXTRACTION_PATH):
+def get_path_asc_paths(filename):
     """
     This funciton returns a list of paths of asc files.
     """
