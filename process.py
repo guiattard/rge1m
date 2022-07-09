@@ -13,7 +13,7 @@ from tqdm.notebook import tqdm
 DATAPATH = 'data'
 os.makedirs(DATAPATH, exist_ok=True)
 TEMP_ZIP = os.path.join(DATAPATH, "temp7z")
-EXTRACTION_PATH = os.path.join(DATAPATH, "RGE_ALTI_5m")
+EXTRACTION_PATH = os.path.join(DATAPATH, "RGE_ALTI_1m")
 
 # Define requested info to access the FTP.
 URL = "ftp3.ign.fr"
@@ -85,7 +85,7 @@ class FTPHelper:
         print(f"{filename} is downloaded.")
         return output_filepath
 
-def extract_rge5m(filename):
+def extract_rge(filename):
     """
     Extracts the zip DEM.
     """
