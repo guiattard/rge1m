@@ -2,6 +2,7 @@ import os
 import py7zr
 import shutil
 from ftplib import FTP
+import numpy as np
 from osgeo import gdal, osr
 import shutil
 import rasterio
@@ -100,11 +101,11 @@ def get_path_asc_paths(filename):
     """
     This funciton returns a list of paths of asc files.
     """
-    for root, dirs, files in os.walk(EXTRACTION_PATH, filename[:-3]):
+    for root, dirs, files in os.walk(EXTRACTION_PATH):
         if "1_DONNEES_LIVRAISON" in root:
-            asc_paths_list = sorted([os.path.join(root, name) for name in files if name.endswith(".asc")])
-
-    return asc_paths_list
+            local_list = sorted([os.path.join(root, name) for name in files if (name.endswith(".asc") and "_MNT_" in name)])
+            if len(local_list)>0:
+                return local_list
 
 def get_header_asc(filepath):
     """
@@ -171,6 +172,30 @@ def asc_to_tif(file, output_raster_dir, epsg):
     output_raster.FlushCache()
     return output_rasterpath
 
+def merge_tif_list(sub_raster_paths_list, result_path, sub_mosaic_name):
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            raster_to_mosaic_list = [stack.enter_context(rasterio.open(path)) 
+                for path in sub_raster_paths_list
+            ]
+            mosaic, output = merge(raster_to_mosaic_list)
+            output_meta = raster_to_mosaic_list[0].meta.copy()
+        
+        output_meta.update({
+            "driver": "GTiff",
+            "height": mosaic.shape[1],
+            "width": mosaic.shape[2],
+            "transform": output,
+        })
+        print("Merging process of", sub_mosaic_name, "done!")
+
+        # Save the result.
+        os.makedirs(result_path, exist_ok=True)
+        sub_mosaic_path = os.path.join(result_path, sub_mosaic_name)
+        with rasterio.open(sub_mosaic_path, "w", **output_meta) as m:
+            m.write(mosaic)
+        return sub_mosaic_path
+
 def create_rge_mosaic(asc_paths_list, result_path, mosaic_name, crs):
     """
     Creates a mosaic associated to multiple asc files.
@@ -186,31 +211,43 @@ def create_rge_mosaic(asc_paths_list, result_path, mosaic_name, crs):
     tmpdir = os.path.join(DATAPATH, 'local_tifs')
     os.makedirs(tmpdir, exist_ok = True)
     
-    output_raster_paths_list = [asc_to_tif(RGEitem(ascpath), tmpdir, crs) for ascpath in asc_paths_list]
+    if len(os.listdir(tmpdir))==0:
+        print("starting to convert asc files to tiffs.")
+        output_raster_paths_list = sorted([asc_to_tif(RGEitem(ascpath), tmpdir, crs) for ascpath in asc_paths_list])
+        print("All asc files are now converted.")
+    else:
+        print("tiffs are already created.")
+        output_raster_paths_list = sorted([os.path.join(tmpdir, name) for name in os.listdir(tmpdir)])
     
+    print("Merging process ongoing...")
     # Safely load rasters and create the mosaic.
-    from contextlib import ExitStack
-    with ExitStack() as stack:
-        raster_to_mosaic_list = [stack.enter_context(rasterio.open(path)) 
-            for path in output_raster_paths_list
-        ]
-        mosaic, output = merge(raster_to_mosaic_list)
-        output_meta = raster_to_mosaic_list[0].meta.copy()
-    
-    output_meta.update({
-        "driver": "GTiff",
-        "height": mosaic.shape[1],
-        "width": mosaic.shape[2],
-        "transform": output,
-    })
 
-    # Save the result.
-    os.makedirs(result_path, exist_ok=True)
-    mosaic_path = os.path.join(result_path, mosaic_name)
-    with rasterio.open(mosaic_path, "w", **output_meta) as m:
-        m.write(mosaic)
+    # Split the output_raster_paths_list into 6 lists
+    list_lenght = len(output_raster_paths_list)
+    n_split = int(list_lenght/6)
+
+    sub_raster_paths_list1 = output_raster_paths_list[:n_split]
+    sub_raster_paths_list2 = output_raster_paths_list[n_split:2*n_split]
+    sub_raster_paths_list3 = output_raster_paths_list[2*n_split:3*n_split]
+    sub_raster_paths_list4 = output_raster_paths_list[3*n_split:4*n_split]
+    sub_raster_paths_list5 = output_raster_paths_list[4*n_split:5*n_split]
+    sub_raster_paths_list6 = output_raster_paths_list[5*n_split:]
+
+    sub_mosaic_name1 = mosaic_name[:-4] + "sub1.tif"
+    sub_mosaic_name2 = mosaic_name[:-4] + "sub2.tif"
+    sub_mosaic_name3 = mosaic_name[:-4] + "sub3.tif"
+    sub_mosaic_name4 = mosaic_name[:-4] + "sub4.tif"
+    sub_mosaic_name5 = mosaic_name[:-4] + "sub5.tif"
+    sub_mosaic_name6 = mosaic_name[:-4] + "sub6.tif"
+
+    sub_mosaic_path1 = merge_tif_list(sub_raster_paths_list1, result_path, sub_mosaic_name1)
+    sub_mosaic_path2 = merge_tif_list(sub_raster_paths_list2, result_path, sub_mosaic_name2)
+    sub_mosaic_path3 = merge_tif_list(sub_raster_paths_list3, result_path, sub_mosaic_name3)
+    sub_mosaic_path4 = merge_tif_list(sub_raster_paths_list4, result_path, sub_mosaic_name4)
+    sub_mosaic_path5 = merge_tif_list(sub_raster_paths_list5, result_path, sub_mosaic_name5)
+    sub_mosaic_path6 = merge_tif_list(sub_raster_paths_list6, result_path, sub_mosaic_name6)
     
     # Purge the tmp dir.
-    shutil.rmtree(tmpdir)
-
-    return mosaic_path
+    #shutil.rmtree(tmpdir)
+    print("tmp dir purged!")
+    return [sub_mosaic_path1, sub_mosaic_path2, sub_mosaic_path3, sub_mosaic_path4, sub_mosaic_path5, sub_mosaic_path6]
