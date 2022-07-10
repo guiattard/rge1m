@@ -248,6 +248,7 @@ def create_rge_mosaic(asc_paths_list, result_path, mosaic_name, crs):
     sub_mosaic_path6 = merge_tif_list(sub_raster_paths_list6, result_path, sub_mosaic_name6)
     
     # Purge the tmp dir.
-    #shutil.rmtree(tmpdir)
+    shutil.rmtree(tmpdir)
+    shutil.rmtree(os.path.join(EXTRACTION_PATH, os.listdir(EXTRACTION_PATH)[0]))
     print("tmp dir purged!")
     return [sub_mosaic_path1, sub_mosaic_path2, sub_mosaic_path3, sub_mosaic_path4, sub_mosaic_path5, sub_mosaic_path6]
