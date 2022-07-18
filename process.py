@@ -39,6 +39,10 @@ REGIONS = {
     'Occitanie': ['09', '11', '12', '30', '31', '32', '34', '46', '48', '65', '66', '81', '82'],
     'Pays de la Loire': ['44', '49', '53', '72', '85'],
     'Provence-Alpes-Côte d\'Azur': ['04', '05', '06', '13', '83', '84'],
+    'Saint-Pierre-et-Miquelon': ['975'],
+    'Mayotte': ['976'],
+    'Saint-Barthélemy': ['977'],
+    'Saint-Martin': ['978']
 }
 
 # Create a small helper class to manipulate our ftp connection
